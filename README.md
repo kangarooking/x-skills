@@ -239,8 +239,9 @@ scoring:
 
 ## 🔗 相关链接
 
-- [Claude Code](https://claude.ai/claude-code) - Anthropic 官方 CLI
-- [Playwright MCP](https://github.com/anthropics/claude-code) - 浏览器自动化
+- [Claude Code](https://github.com/anthropics/claude-code) - Anthropic 官方 CLI
+- [Playwright MCP](https://github.com/microsoft/playwright-mcp) - 浏览器自动化
+
 
 ---
 

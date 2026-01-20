@@ -239,8 +239,8 @@ This project is licensed under [Apache License 2.0](LICENSE).
 
 ## 🔗 Related Links
 
-- [Claude Code](https://claude.ai/claude-code) - Anthropic's Official CLI
-- [Playwright MCP](https://github.com/anthropics/claude-code) - Browser Automation
+- [Claude Code](https://github.com/anthropics/claude-code) - Anthropic's Official CLI
+- [Playwright MCP](https://github.com/microsoft/playwright-mcp) - Browser Automation
 
 ---
 
