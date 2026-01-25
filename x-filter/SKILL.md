@@ -23,6 +23,16 @@ Score and filter collected materials for X content creation. Topics scoring ≥7
 - Materials from x-collect (or manual input)
 - User profile from x-create/references/user-profile.md (for relevance scoring)
 
+## Optional State (Feedback Loop)
+
+If available, use persisted state to improve filtering:
+
+- State dir: `~/.claude/skills/x-create/state/`
+- Negative samples: `rejected_topics.json` (SimilarityFilter)
+- Events log: `events.jsonl` (optional analytics)
+
+If state files don't exist, proceed normally.
+
 ## Workflow
 
 ### Input
@@ -34,7 +44,16 @@ Accept materials from:
 
 ### Scoring Process
 
-For each material/topic:
+For each material/topic, score multiple dimensions and combine with weights.
+
+**Weighted score (recommended):**
+
+`FinalScore = Σ(w_i × s_i) - NegPenalty`
+
+Where:
+- `s_i` are per-dimension scores (0..max)
+- `w_i` come from `references/user-profile.md` (fallback to defaults)
+- `NegPenalty` is derived from similarity to rejected topics and other negative signals
 
 **1. 热度/趋势 (Trending Score: 0-4)**
 ```
@@ -44,6 +63,11 @@ For each material/topic:
 1分: 小众话题，关注度有限
 0分: 过时话题，几乎无人讨论
 ```
+
+**(Optional) 新鲜度 (Freshness)**
+- If you can infer recency from sources, either:
+  - fold it into Trending score, or
+  - add a small bonus/penalty (e.g., +0.5 for <72h, -0.5 for >30d)
 
 **2. 争议性 (Controversy Score: 0-2)**
 ```
@@ -69,6 +93,15 @@ For each material/topic:
 Check user profile at: `~/.claude/skills/x-create/references/user-profile.md`
 If not found, assume domains: [AI/科技, 创业, 个人成长]
 
+**SimilarityFilter (Negative Samples):**
+
+- If `~/.claude/skills/x-create/state/rejected_topics.json` exists, compare each candidate topic to rejected items.
+- If max similarity ≥ 0.85: mark as likely duplicate/low-value → strong penalty or direct reject.
+- If 0.75 ≤ similarity < 0.85: apply soft penalty (e.g., -2 points) and explain why.
+
+(Implementation via script):
+- `python ~/.claude/skills/x-create/scripts/x_state.py similarity --against rejected --text "{topic}" --topk 3`
+
 ### Output Format
 
 ```markdown
@@ -83,25 +116,26 @@ If not found, assume domains: [AI/科技, 创业, 个人成长]
 
 ## 筛选结果
 
-### 入选创作池 (≥7分)
+### Tier A：入选创作池 (≥7分)
 
-#### 1. {Topic Title} - **{total_score}分**
-| 热度 | 争议性 | 高价值 | 相关性 |
-|------|--------|--------|--------|
-| {trending}/4 | {controversy}/2 | {value}/3 | {relevance}/1 |
+#### 1. {Topic Title} - **{final_score}分**
+| 热度 | 争议性 | 高价值 | 相关性 | 负向惩罚 |
+|------|--------|--------|--------|----------|
+| {trending}/4 | {controversy}/2 | {value}/3 | {relevance}/1 | -{neg_penalty} |
 
 - **推荐类型**: [短推文/Thread/评论回复]
 - **推荐风格**: [高价值干货/犀利观点/热点评论/故事洞察/技术解析]
 - **创作角度**: 建议的切入点
 - **核心观点**: 可提炼的关键论点
+- **相似度命中（可选）**: {max_similarity} - matched: {matched_ids}
 
 #### 2. ...
 
-### 待定 (5-6分)
-- {Topic} - {score}分 - {原因}
+### Tier B：待定 (5-6分)
+- {Topic} - {final_score}分 - {原因}
 
-### 淘汰 (<5分)
-- {Topic} - {score}分 - {原因}
+### Tier C：淘汰 (<5分)
+- {Topic} - {final_score}分 - {原因}
 
 ## 创作建议
 
@@ -112,15 +146,55 @@ If not found, assume domains: [AI/科技, 创业, 个人成长]
 下一步：运行 `/x-create {选题}` 开始创作
 ```
 
+Append a machine-readable block for hooks/state ingestion:
+
+```json
+FILTER_JSON
+{
+  "schema_version": "x_skills.filter.v1",
+  "timestamp": "{timestamp}",
+  "profile": {
+    "domains": ["..."],
+    "persona_style": "..."
+  },
+  "items": [
+    {
+      "topic": "...",
+      "scores": {
+        "trending": 0,
+        "controversy": 0,
+        "value": 0,
+        "relevance": 0,
+        "neg_penalty": 0
+      },
+      "final_score": 0,
+      "tier": "A|B|C",
+      "reasons": ["..."],
+      "similarity": {
+        "max": 0.0,
+        "matched": [{"id":"rej_xxx","score":0.0,"title":"..."}]
+      }
+    }
+  ]
+}
+```
+
 ## Execution Steps
 
 1. **Load materials** from x-collect or user input
-2. **Read user profile** for relevance scoring
-3. **Score each material** on 4 criteria
-4. **Calculate totals** and sort by score
-5. **Categorize**: ≥7 (入选), 5-6 (待定), <5 (淘汰)
-6. **Generate recommendations** for top topics
-7. **Output report** with next steps
+2. **Read user profile** for relevance scoring and weights
+3. **(Optional) SimilarityFilter** against rejected topics
+4. **Score each material** on criteria and compute `FinalScore`
+5. **Diversity adjustments (recommended)**:
+   - Apply source/domain attenuation: `score *= 0.6^(N-1)` for repeated sources
+   - Dedup per topic cluster: keep best-scoring item per cluster
+6. **Categorize**: Tier A ≥7, Tier B 5-6, Tier C <5
+7. **Output report** + `FILTER_JSON`
+8. **(Optional) Persist feedback-loop state**:
+   - Write Tier C items to rejected set:
+     - `python ~/.claude/skills/x-create/scripts/x_state.py reject --topic-json '{"title":"...","reason":"...","stage":"filter"}'`
+   - Append event:
+     - `python ~/.claude/skills/x-create/scripts/x_state.py event --event filter.scored --payload-json '{"accepted":3,"maybe":2,"rejected":7}'`
 
 ## Example
 

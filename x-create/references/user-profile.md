@@ -29,6 +29,18 @@ scoring:
   threshold: 7          # 进入创作池的分数阈值
 ```
 
+## 实验与默认行为（可选）
+
+用于控制 x-create 的默认创作行为（A/B、critic、重写等）：
+
+```yaml
+experiments:
+  ab_variants: true         # 默认生成 Variant A/B
+  critic_enabled: true      # 启用自检打分
+  critic_threshold: 7       # 低于阈值触发重写
+  auto_rewrite_once: true   # 最多自动重写一次
+```
+
 ## 使用说明
 
 1. **首次使用**：运行任意x-skills时，会自动进行问答收集信息

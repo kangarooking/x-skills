@@ -12,6 +12,16 @@ Collect trending topics and research materials for X content creation using a sy
 - WebSearch tool available
 - Internet connection
 
+## Optional State (ContextStore)
+
+If available, leverage user preference state to improve search quality:
+
+- State dir: `~/.claude/skills/x-create/state/`
+- Positive samples: `liked_topics.json` (preferred topics/entities/sources)
+- Negative samples: `rejected_topics.json` (avoid low-value/repetitive topics)
+
+If state files don't exist, proceed normally.
+
 ## Workflow
 
 ### Input
@@ -22,7 +32,20 @@ User provides:
 
 ### 4-Round Search Strategy
 
-Simulate human research thinking process with progressive depth:
+Simulate human research thinking process with progressive depth.
+
+**Query expansion rules (lightweight):**
+
+- Start with user `topic`
+- Add 2-5 query variants based on:
+  - **User profile** (domains/persona if known)
+  - **liked_topics.json** high-frequency keywords/entities (if available)
+- Keep ~20% queries as **exploration** (cross-domain / adjacent keywords) to avoid information bubble
+
+**Dedup & clustering (at the end of each round):**
+
+- Merge near-duplicate URLs/titles
+- Group materials into topic clusters (rough tags are fine)
 
 **Round 1: Official Sources (权威信息)**
 ```
@@ -83,6 +106,10 @@ Generate structured material document:
   - 要点2
 - **潜在选题角度**: ...
 - **推荐推文类型**: [高价值干货/犀利观点/热点评论/故事洞察/技术解析]
+- **QualityScore (0-10)**: ...
+- **TopicCluster**: ...
+- **HookCandidates**:
+  - ...
 
 ### 素材 2
 ...
@@ -100,6 +127,28 @@ Generate structured material document:
 使用 `/x-filter` 对素材进行打分筛选
 ```
 
+Additionally, append a machine-readable block for hooks/state ingestion:
+
+```json
+MATERIALS_JSON
+{
+  "schema_version": "x_skills.materials.v1",
+  "topic": "{Topic}",
+  "timestamp": "{timestamp}",
+  "items": [
+    {
+      "title": "...",
+      "url": "...",
+      "summary": "...",
+      "key_points": ["..."],
+      "quality_score_0_10": 0,
+      "topic_cluster": "...",
+      "hook_candidates": ["..."]
+    }
+  ]
+}
+```
+
 ## Execution Steps
 
 1. **Receive topic** from user
@@ -109,8 +158,10 @@ Generate structured material document:
 5. **Analyze gaps** from rounds 1-3
 6. **Execute Round 4** searches (fill gaps)
 7. **Synthesize results** into structured format
-8. **Save to temp file** for x-filter to use
-9. **Report summary** to user
+8. **Output MATERIALS_JSON** (for hooks/state ingestion)
+9. **(Optional) Append event** for feedback loop:
+   - `python ~/.claude/skills/x-create/scripts/x_state.py event --event collect.completed --payload-json '{"topic":"...","items_count":12,"explore_ratio":0.2}'`
+10. **Report summary** to user
 
 ## Example
 

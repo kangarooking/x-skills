@@ -1,6 +1,6 @@
 ---
 name: x-create
-description: Create viral X (Twitter) posts including short tweets, threads, and replies. Use when user wants to write X content, create posts, or mentions "create tweet", "write thread", "x-create", "写推文", "创作推文". Supports 5 post styles with customizable templates. First-time users go through onboarding to set up profile.
+description: Create viral X (Twitter) posts including short tweets, threads, and replies. Use when user wants to write X content, create posts, or mentions "create tweet", "write thread", "x-create", "写推文", "创作推文". Supports 5 post styles with customizable templates, plus a mandatory humanize pass to reduce AI-sounding phrasing. First-time users go through onboarding to set up profile.
 ---
 
 # X Create
@@ -34,13 +34,13 @@ After collecting answers, update `references/user-profile.md` with `initialized:
 
 ### 5 Categories
 
-| Type | Style | Use When |
-|------|-------|----------|
-| **高价值干货** | 信息密度高，可收藏 | 教程、工具推荐、方法论 |
-| **犀利观点** | 有态度有立场 | 行业评论、反常识观点 |
-| **热点评论** | 快速反应 | 新闻评论、事件点评 |
-| **故事洞察** | 个人经历+洞察 | 案例分析、经验复盘 |
-| **技术解析** | 深度技术 | 原理讲解、源码分析 |
+| Type | Style | Use When | Intent Signals (路由线索) |
+|------|-------|----------|--------------------------|
+| **高价值干货** | 信息密度高，可收藏 | 教程、工具推荐、方法论 | 目标是收藏/转发；强调可执行清单、工具、步骤 |
+| **犀利观点** | 有态度有立场 | 行业评论、反常识观点 | 目标是讨论/对立；需要强立场、对比、反常识 |
+| **热点评论** | 快速反应 | 新闻评论、事件点评 | 目标是蹭热度/抢时效；围绕刚发生事件快速解读 |
+| **故事洞察** | 个人经历+洞察 | 案例分析、经验复盘 | 目标是共鸣/关注；用具体场景+转折+金句 |
+| **技术解析** | 深度技术 | 原理讲解、源码分析 | 目标是建立专业度；解释原理、机制、影响与建议 |
 
 ### Output Formats
 
@@ -54,27 +54,78 @@ After collecting answers, update `references/user-profile.md` with `initialized:
 
 ```
 1. Read references/user-profile.md → Get persona, style
-2. Check assets/templates/{type}/ → Look for user reference posts
-3. If no references → Use default patterns from references/post-patterns.md
+2. (Optional) Read state from ~/.claude/skills/x-create/state/
+   - liked_topics.json (positive samples)
+   - rejected_topics.json (negative samples)
+   - events.jsonl (optional)
+3. Check assets/templates/{type}/ → Look for user reference posts
+4. If no references → Use default patterns from references/post-patterns.md
 ```
 
-### Step 2: Determine Format
+### Step 2: Intent-based Routing
 
-Based on content length and complexity:
-- **Short tweet**: Single insight, quick take, one-liner
-- **Thread**: Multi-point analysis, step-by-step, detailed breakdown
-- **Reply**: Designed to respond to specific post/topic
+Determine intent first, then choose style and format:
+
+1. **Intent → Style (5 categories)**
+   - 收藏/转发导向 → 高价值干货
+   - 讨论/对立导向 → 犀利观点
+   - 时效/热点导向 → 热点评论
+   - 共鸣/关注导向 → 故事洞察
+   - 专业/技术导向 → 技术解析
+
+2. **Style → Output format**
+   - **Short tweet**: Single insight, quick take, one-liner
+   - **Thread**: Multi-point analysis, step-by-step, detailed breakdown
+   - **Reply**: Designed to respond to specific post/topic
+
+If user explicitly provides `--type`, follow it. Otherwise route automatically.
 
 ### Step 3: Apply Pattern
 
 Read `references/post-patterns.md` for the specific post type pattern.
 
-### Step 4: Generate Content
+### Step 4: Generate Content (A/B Variants)
 
-Create content following:
+Create **two variants** by default:
+
+- **Variant A**: More direct, stronger hook, higher contrast
+- **Variant B**: More structured, more evidence, slightly more neutral
+
+Follow:
 1. User's persona style
-2. Post type pattern
+2. Selected post style pattern
 3. Reference examples (if available)
+
+### Step 4.5: Humanize Pass（去 AI 味，默认必做）
+
+For **each** variant, rewrite the text to sound like a real person on X while keeping meaning and claims unchanged:
+
+- Delete filler + chatbot politeness: avoid "当然/希望这对你有帮助/让我们来深入探讨"
+- Remove grand/marketing tone: avoid "标志着/至关重要/不断演变的格局/彰显/赋能/令人叹为观止"
+- No vague attribution: avoid "专家认为/行业报告显示" unless you provide a specific source; otherwise rewrite as "我观察到/我的判断是..."
+- Reduce connective phrases: avoid overusing "此外/然而/因此"; prefer simple sentences and line breaks
+- Break formula: do not force "三段式"; 2 points is fine; mix short + long sentences
+- Avoid dash spam: do not stack "——"
+- Prefer concrete details over empty conclusions; if you are unsure, say it plainly and briefly
+
+Thread constraints:
+- Each tweet must be <= 280 characters
+- Do not make every tweet identical in structure; allow 1-2 short "pause" lines
+
+### Step 5: Critic (Self-evaluation) + Rewrite Once
+
+Score the **humanized** Variant A/B as the target reader (0-10):
+- Hook strength
+- Information density / value
+- Clarity and readability
+- Credibility (no exaggeration / no made-up facts)
+- Persona fit
+- Action likelihood: like / repost / bookmark / reply
+- "AI 味" control: no empty grand statements, no templated endings, no vague authority
+
+Rules:
+- If **both** Variant A and B score < 7, rewrite **once** (produce A2/B2), then run the **same humanize pass again**, and re-score.
+- Select the best variant as final output, but still show both drafts.
 
 ## Output Format
 
@@ -92,7 +143,9 @@ Create content following:
 
 ---
 
-## 正文
+## Drafts
+
+### Variant A
 
 {For short tweet: single tweet content}
 
@@ -108,6 +161,33 @@ Create content following:
 ### N/N
 {final tweet with call to action}
 
+**Critic score (0-10)**: {critic_score_a}
+
+### Variant B
+
+{For short tweet: single tweet content}
+
+{For thread:}
+### 1/N
+{first tweet}
+
+### 2/N
+{second tweet}
+
+...
+
+### N/N
+{final tweet with call to action}
+
+**Critic score (0-10)**: {critic_score_b}
+
+---
+
+## Selected
+
+Selected variant: {A|B|A2|B2}
+Reason: {one-sentence reason}
+
 ---
 
 ## 发布建议
@@ -116,6 +196,35 @@ Create content following:
 - 预期互动: {engagement prediction}
 
 下一步：运行 /x-publish 发布到草稿箱
+```
+
+Append machine-readable blocks for hooks/state ingestion:
+
+```json
+CREATE_JSON
+{
+  "schema_version": "x_skills.create.v1",
+  "topic": "{topic}",
+  "post_type": "short|thread|reply",
+  "post_style": "high-value|sharp-opinion|trending-comment|story-insight|tech-analysis",
+  "variants": [
+    {"id":"A","critic_score_0_10":0,"text":"..."},
+    {"id":"B","critic_score_0_10":0,"text":"..."}
+  ],
+  "selected": "A|B|A2|B2",
+  "rewrite_once": true
+}
+```
+
+```json
+HOOKS_JSON
+{
+  "schema_version": "x_skills.hooks.v1",
+  "topic": "{topic}",
+  "hooks": [
+    {"text":"...","source":"variant.A","tags":["数字|反常识|痛点|悬念|类比"],"score_0_10":0}
+  ]
+}
 ```
 
 ## Template Priority
@@ -158,40 +267,31 @@ User: `/x-create Claude 4.5 Opus发布 --type thread`
 
 ```
 ### 1/5
-Claude 4.5 Opus 发布了，这可能是2025年最重要的AI模型发布。
+Claude 4.5 Opus 上线了。我先说结论：它更像“慢一点，但更稳”的那类模型。
 
-为什么？因为它第一次真正实现了"思考后行动"。
-
-一个线程，讲清楚它的核心突破👇
+我用 3 个小任务试了下，写个线程记录👇
 
 ### 2/5
-传统大模型：输入→输出
-Claude 4.5：输入→思考→验证→输出
+我最直观的感受不是“更聪明”，而是更会停下来检查自己。
 
-这个"思考"不是噱头，是真正的extended thinking...
+同一个问题，它更少给“听起来对”的答案。
 
 ### 3/5
-实测几个场景：
-1. 代码重构：准确率从78%→94%
-2. 数学推理：复杂证明成功率翻倍
-3. 长文档分析：关键信息遗漏降低60%
+三个场景（都不算大项目）：
+1) 重构一个旧模块：更愿意先问清边界，再动手改
+2) 复杂推理题：会把关键假设写出来（这点很救命）
+3) 长文档梳理：更少漏掉前后矛盾的地方
 
 ### 4/5
-但也有代价：
-- 延迟增加2-3倍
-- API成本是GPT-4的3倍
-- 需要更精准的prompt
-
-适合：复杂任务、高价值场景
-不适合：简单问答、实时交互
+代价也很现实：
+- 反应慢一点
+- 成本可能更高（看你用的套餐/调用方式）
+- 你得给它更明确的上下文
 
 ### 5/5
-我的判断：
-Claude 4.5不是要取代GPT-4，而是开辟了一个新赛道——需要"慢思考"的场景。
+如果你做的是“错一次就很麻烦”的任务（代码、决策、长文整理），值得试。
 
-这可能才是AGI的正确方向。
-
-你觉得呢？
+只是日常闲聊，感知没那么强。你们试过了吗？
 ```
 
 ## Integration
@@ -205,4 +305,12 @@ After creation, suggest:
 - 预计阅读: {read_time}
 
 下一步：运行 /x-publish 发布到X草稿箱
+
+（反馈闭环，可选）
+- 采纳并进入正样本：
+  python ~/.claude/skills/x-create/scripts/x_state.py like --topic-json '{"title":"{topic}","selected":"{A|B}","critic_score":8}'
+- 否决并进入负样本：
+  python ~/.claude/skills/x-create/scripts/x_state.py reject --topic-json '{"title":"{topic}","reason":"low_value"}'
+- 写入事件（hooks 自动收集也可用）：
+  python ~/.claude/skills/x-create/scripts/x_state.py event --event create.generated --payload-json '{"topic":"{topic}","variants":["A","B"],"selected":"{A|B}"}'
 ```

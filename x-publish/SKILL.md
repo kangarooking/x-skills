@@ -261,3 +261,23 @@ After publishing:
 
 请手动审核后发布。
 ```
+
+Append a machine-readable block for hooks/state ingestion:
+
+```json
+PUBLISH_JSON
+{
+  "schema_version": "x_skills.publish.v1",
+  "timestamp": "{timestamp}",
+  "draft_saved": true,
+  "post_type": "short|thread",
+  "count": 1,
+  "draft_url": "https://x.com/compose/drafts"
+}
+```
+
+(Optional) Append event for feedback loop:
+
+```bash
+python ~/.claude/skills/x-create/scripts/x_state.py event --event publish.saved_to_draft --payload-json '{"post_type":"short","count":1,"draft_saved":true}'
+```
