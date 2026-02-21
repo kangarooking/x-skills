@@ -4,6 +4,7 @@
 
 > 一套用于 X (Twitter) 内容创作自动化的 Claude Skills，帮助你高效收集素材、筛选选题、创作爆款推文并发布到草稿箱。
 
+[![Version](https://img.shields.io/badge/Version-2.0-green.svg)](./RELEASE_NOTES_v2.0.md)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Claude Code](https://img.shields.io/badge/Claude-Code-orange)](https://claude.ai/claude-code)
 

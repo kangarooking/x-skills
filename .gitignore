@@ -1,6 +1,7 @@
 # Project specific
 PLAN.md
 .DS_Store
+CODEBUDDY.md
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
