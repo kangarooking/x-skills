@@ -12,6 +12,26 @@ Collect trending topics and research materials for X content creation using a sy
 - WebSearch tool available
 - Internet connection
 
+## Optional X Evidence (Hermes Tweet / Xquik)
+
+If `XQUIK_API_KEY` or `HERMES_TWEET_API_KEY` is available, collect a small
+read-only X evidence sample to enrich the WebSearch material report:
+
+```bash
+python ~/.claude/skills/x-collect/scripts/xquik_evidence.py search "{topic}" --limit 5 --format markdown
+python ~/.claude/skills/x-collect/scripts/xquik_evidence.py trends --woeid 1 --limit 10
+```
+
+Use this evidence for:
+
+- real X wording, objections, and hook candidates
+- trend and controversy scoring inputs
+- reply mining when the user provides a specific tweet ID
+
+The helper reads credentials from environment variables only. If no key is
+configured, it prints a skipped result and the normal WebSearch workflow
+continues unchanged.
+
 ## Optional State (ContextStore)
 
 If available, leverage user preference state to improve search quality:
@@ -80,6 +100,13 @@ Search: "{topic} 最新 latest 2024 2025"
 ```
 Goal: Fill information gaps and get latest updates
 
+**Optional X evidence pass:**
+
+- If an API key is configured, run `xquik_evidence.py search "{topic}" --limit 5`.
+- If the topic is trend-focused, also run `xquik_evidence.py trends --woeid 1 --limit 10`.
+- If the user gave a tweet ID, run `xquik_evidence.py replies {tweet_id} --limit 10`.
+- Treat X evidence as supporting signals, not the only source of truth.
+
 ### Output Format
 
 Generate structured material document:
@@ -122,6 +149,12 @@ Generate structured material document:
 ## 争议点
 - 争议1: ...
 - 争议2: ...
+
+## X Evidence（可选）
+- **状态**: collected / skipped / unavailable
+- **用途**: wording samples, reply objections, engagement signals, hook candidates
+- **样本**:
+  - ...
 
 ## 下一步建议
 使用 `/x-filter` 对素材进行打分筛选

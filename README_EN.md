@@ -184,6 +184,8 @@ scoring:
 
 **For x-collect**:
 - WebSearch tool available
+- Optional: `XQUIK_API_KEY` or `HERMES_TWEET_API_KEY` for read-only X evidence
+  via `x-collect/scripts/xquik_evidence.py`
 
 ---
 
