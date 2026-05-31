@@ -12,6 +12,26 @@ Collect trending topics and research materials for X content creation using a sy
 - WebSearch tool available
 - Internet connection
 
+## Optional X Evidence (GetXAPI)
+
+If `GETXAPI_API_KEY` is available, collect a small read-only X evidence sample
+to enrich the WebSearch material report:
+
+```bash
+python ~/.claude/skills/x-collect/scripts/getxapi_evidence.py search "{topic}" --limit 5 --format markdown
+python ~/.claude/skills/x-collect/scripts/getxapi_evidence.py replies {tweet_id} --limit 10
+```
+
+Use this evidence for:
+
+- real X wording, objections, and hook candidates
+- reply mining when the user provides a specific tweet ID
+- supporting signals for trend and controversy scoring
+
+The helper reads credentials from environment variables only. If no key is
+configured, it prints a skipped result and the normal WebSearch workflow
+continues unchanged.
+
 ## Optional State (ContextStore)
 
 If available, leverage user preference state to improve search quality:
