@@ -224,6 +224,8 @@ python3 ~/.claude/skills/x-create/scripts/x_state.py event --event collect.compl
 
 **x-collect 需要**：
 - WebSearch 工具可用
+- 可选：设置 `GETXAPI_API_KEY`，通过
+  `x-collect/scripts/getxapi_evidence.py` 收集只读 X 证据样本
 
 ---
 

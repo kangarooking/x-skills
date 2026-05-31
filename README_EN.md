@@ -184,6 +184,8 @@ scoring:
 
 **For x-collect**:
 - WebSearch tool available
+- Optional: `GETXAPI_API_KEY` for read-only X evidence via
+  `x-collect/scripts/getxapi_evidence.py`
 
 ---
 
